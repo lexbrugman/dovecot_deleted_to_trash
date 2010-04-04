@@ -1,35 +1,11 @@
-/* Copyright (C) 2008 steven.xu@lba.ca, 2009 Lex Brugman <lex dot brugman at gmail dot com> */
-#include "lib.h"
+/* Copyright (C) 2008 steven.xu@lba.ca, 2010 Lex Brugman <lex dot brugman at gmail dot com> */
+#include "deleted-to-trash-plugin.h"
 #include "array.h"
 #include "str.h"
 #include "str-sanitize.h"
-#include "mail-storage-private.h"
-#include "mail-namespace.h"
-#include "mailbox-list-private.h"
-#include "deleted-to-trash-plugin.h"
+
 #include <stdlib.h>
 
-
-#define TRASH_NAME "Trash"
-
-#define DELETED_TO_TRASH_CONTEXT(obj) MODULE_CONTEXT(obj, deleted_to_trash_storage_module)
-#define DELETED_TO_TRASH_MAIL_CONTEXT(obj) MODULE_CONTEXT(obj, deleted_to_trash_mail_module)
-#define DELETED_TO_TRASH_LIST_CONTEXT(obj) MODULE_CONTEXT(obj, deleted_to_trash_mailbox_list_module)
-
-/* defined by imap, pop3, lda */
-const char *deleted_to_trash_plugin_version = PACKAGE_VERSION;
-
-static void (*deleted_to_trash_next_hook_mail_storage_created) (struct mail_storage *storage);
-static void (*deleted_to_trash_next_hook_mailbox_list_created) (struct mailbox_list *list);
-
-static MODULE_CONTEXT_DEFINE_INIT(deleted_to_trash_storage_module, &mail_storage_module_register);
-static MODULE_CONTEXT_DEFINE_INIT(deleted_to_trash_mail_module, &mail_module_register);
-static MODULE_CONTEXT_DEFINE_INIT(deleted_to_trash_mailbox_list_module, &mailbox_list_module_register);
-
-static void * last_copy_transaction_context = 0;
-static unsigned int last_copy_mail_id[2000];
-static unsigned int last_copy_mail_number = 0;
-static char *last_copy_src_mailbox_name = NULL;
 
 struct mail_namespace *
 get_users_inbox_namespace(struct mail_user *user)
@@ -54,7 +30,6 @@ get_users_inbox_namespace(struct mail_user *user)
 static int
 search_deleted_id(struct mail *_mail)
 {
-	unsigned int loop_count = 0;
 	unsigned int deleted_id = _mail->uid;
 	int ret = 0;
 
@@ -62,11 +37,16 @@ search_deleted_id(struct mail *_mail)
 	 * only if the copy and delete box are the same, otherwise, we need to reset the last copy data
 	 * since copy always follows a delete in IMAP (when moving an email from one folder to another folder).
 	 */
-	if(last_copy_src_mailbox_name != NULL && strcmp(_mail->box->name, last_copy_src_mailbox_name) == 0)
+	if(last_copy.src_mailbox_name != NULL && strcmp(_mail->box->name, last_copy.src_mailbox_name) == 0)
 	{
-		for(loop_count = 0; loop_count < last_copy_mail_number; ++loop_count)
+		unsigned int count = 0;
+		unsigned int i = 0;
+		unsigned int const *mail_ids = NULL;
+
+		mail_ids = array_get(&last_copy.mail_id, &count);
+		for(i = 0; i < count; i++)
 		{
-			if(last_copy_mail_id[loop_count] == deleted_id)
+			if(mail_ids[i] == deleted_id)
 			{
 				ret = 1;
 				break;
@@ -75,11 +55,15 @@ search_deleted_id(struct mail *_mail)
 	}
 	else
 	{
-		last_copy_mail_number = 0;
-		if(last_copy_src_mailbox_name != NULL)
+		if(array_count(&last_copy.mail_id) > 0)
 		{
-			i_free(last_copy_src_mailbox_name);
-			last_copy_src_mailbox_name = NULL;
+			array_free(&last_copy.mail_id);
+			i_array_init(&last_copy.mail_id, TRASH_LIST_INITSIZE);
+		}
+		if(last_copy.src_mailbox_name != NULL)
+		{
+			i_free(last_copy.src_mailbox_name);
+			last_copy.src_mailbox_name = NULL;
 		}
 	}
 
@@ -118,11 +102,11 @@ copy_deleted_mail_to_trash(struct mail *_mail)
 	struct mail_namespace *ns = NULL;
 
 	ns = get_users_inbox_namespace(_mail->box->storage->ns->user);
-	trash_box = mailbox_open_or_create(ns->storage, TRASH_NAME);
+	trash_box = mailbox_open_or_create(ns->storage, trashfolder_name);
 
 	if(trash_box != NULL)
 	{
-		i_info("opening %s succeeded", TRASH_NAME);
+		i_info("opening %s succeeded", trashfolder_name);
 		struct mailbox_transaction_context *dest_trans;
 		struct mail_save_context *save_ctx;
 		struct mail_keywords *keywords;
@@ -145,12 +129,12 @@ copy_deleted_mail_to_trash(struct mail *_mail)
 		if(ret < 0)
 		{
 			mailbox_transaction_rollback(&dest_trans);
-			i_info("copying to %s failed", TRASH_NAME);
+			i_info("copying to %s failed", trashfolder_name);
 		}
 		else
 		{
 			ret = mailbox_transaction_commit(&dest_trans);
-			i_info("copying to %s succeeded", TRASH_NAME);
+			i_info("copying to %s succeeded", trashfolder_name);
 		}
 
 		mailbox_close(&trash_box);
@@ -158,7 +142,7 @@ copy_deleted_mail_to_trash(struct mail *_mail)
 	}
 	else
 	{
-		i_info("opening %s failed", TRASH_NAME);
+		i_info("opening %s failed", trashfolder_name);
 		ret = -1;
 	}
 
@@ -194,17 +178,17 @@ deleted_to_trash_mail_update_flags(struct mail *_mail, enum modify_type modify_t
 		ns = get_users_inbox_namespace(_mail->box->storage->ns->user);
 
 		/* marked as deleted and not deleted from the Trash folder */
-		if(new_flags & MAIL_DELETED && !(strcmp(_mail->box->name, TRASH_NAME) == 0 && strcmp(_mail->box->storage->ns->prefix, ns->prefix) == 0))
+		if(new_flags & MAIL_DELETED && !(strcmp(_mail->box->name, trashfolder_name) == 0 && strcmp(_mail->box->storage->ns->prefix, ns->prefix) == 0))
 		{
 			if(search_deleted_id(_mail))
 			{
-				i_info("email uid=%d was already copied to %s", _mail->uid, TRASH_NAME);
+				i_info("email uid=%d was already copied to %s", _mail->uid, trashfolder_name);
 			}
 			else
 			{
 				if(copy_deleted_mail_to_trash(_mail) < 0)
 				{
-					i_fatal("failed to copy %d to %s", _mail->uid, TRASH_NAME);
+					i_fatal("failed to copy %d to %s", _mail->uid, trashfolder_name);
 				}
 			}
 		}
@@ -238,34 +222,33 @@ deleted_to_trash_copy(struct mail_save_context *save_ctx, struct mail *mail)
 
 	/* one IMAP copy command can contain many mails ID's, so, this function will be called multiple times */
 	union mailbox_module_context *lbox = DELETED_TO_TRASH_CONTEXT(save_ctx->transaction->box);
-	if(lbox->super.copy(save_ctx, mail) < 0)
-	{
-		ret = -1;
-	}
-	else
+	ret = lbox->super.copy(save_ctx, mail);
+	if(ret >= 0)
 	{
 		/* if the copy transaction context changes, a new copy could have been started, so add additional conditions to check the folder name */
-		i_info("from %s to %s, previous action from %s", mail->box->name, save_ctx->transaction->box->name, last_copy_src_mailbox_name);
-		if(last_copy_transaction_context == save_ctx->transaction && last_copy_src_mailbox_name != NULL && strcmp(last_copy_src_mailbox_name, mail->box->name) == 0)
+		i_info("from %s to %s, previous action from %s", mail->box->name, save_ctx->transaction->box->name, last_copy.src_mailbox_name);
+		if(last_copy.transaction_context == save_ctx->transaction && last_copy.src_mailbox_name != NULL && strcmp(last_copy.src_mailbox_name, mail->box->name) == 0)
 		{
-			i_info("nr %i", last_copy_mail_number + 1);
-			if(last_copy_mail_number < sizeof(last_copy_mail_id))
-			{
-				last_copy_mail_id[last_copy_mail_number++] = mail->uid;
-			}
+			array_append(&last_copy.mail_id, &mail->uid, 1);
+			i_info("nr %i", array_count(&last_copy.mail_id));
 		}
-		else 
+		else
 		{ /* if copying from Trash to some other folder, we don't mark it */
-			last_copy_transaction_context = save_ctx->transaction;
-			last_copy_mail_number = 0;
-			if(strcmp(mail->box->name, TRASH_NAME) != 0 )
+			last_copy.transaction_context = save_ctx->transaction;
+			if(array_count(&last_copy.mail_id) > 0)
 			{
-				last_copy_mail_id[last_copy_mail_number++] = mail->uid;
-				last_copy_src_mailbox_name = i_strdup(mail->box->name);
+				array_free(&last_copy.mail_id);
+				i_array_init(&last_copy.mail_id, TRASH_LIST_INITSIZE);
+			}
+
+			if(strcmp(mail->box->name, trashfolder_name) != 0 )
+			{
+				array_append(&last_copy.mail_id, &mail->uid, 1);
+				last_copy.src_mailbox_name = i_strdup(mail->box->name);
 			}
 			else
 			{
-				i_info("from %s!", TRASH_NAME);
+				i_info("from %s!", trashfolder_name);
 			}
 		}
 	}
@@ -277,9 +260,9 @@ static int
 deleted_to_trash_transaction_commit(struct mailbox_transaction_context *t, uint32_t *uid_validity_r, uint32_t *first_saved_uid_r, uint32_t *last_saved_uid_r)
 {
 	union mailbox_module_context *lbox = DELETED_TO_TRASH_CONTEXT(t->box);
-	if(last_copy_transaction_context == t)
+	if(last_copy.transaction_context == t)
 	{
-		last_copy_transaction_context = NULL;
+		last_copy.transaction_context = NULL;
 	}
 	int ret = lbox->super.transaction_commit(t, uid_validity_r, first_saved_uid_r, last_saved_uid_r);
 
@@ -290,10 +273,9 @@ static void
 deleted_to_trash_transaction_rollback(struct mailbox_transaction_context *t)
 {
 	union mailbox_module_context *lbox = DELETED_TO_TRASH_CONTEXT(t->box);
-	if(last_copy_transaction_context == t)
+	if(last_copy.transaction_context == t)
 	{
-		last_copy_transaction_context = NULL;
-		last_copy_mail_number = 0;
+		last_copy.transaction_context = NULL;
 	}
 	lbox->super.transaction_rollback(t);
 }
@@ -372,11 +354,21 @@ deleted_to_trash_mailbox_list_created(struct mailbox_list *list)
 void
 deleted_to_trash_plugin_init(void)
 {
+	trashfolder_name = getenv("DELETED_TO_TRASH_FOLDER");
+	if(trashfolder_name == NULL)
+	{
+		trashfolder_name = DEFAULT_TRASH_FOLDER;
+	}
+
 	deleted_to_trash_next_hook_mail_storage_created = hook_mail_storage_created;
 	hook_mail_storage_created = deleted_to_trash_mail_storage_created;
 
 	deleted_to_trash_next_hook_mailbox_list_created = hook_mailbox_list_created;
 	hook_mailbox_list_created = deleted_to_trash_mailbox_list_created;
+
+	last_copy.transaction_context = NULL;
+	i_array_init(&last_copy.mail_id, TRASH_LIST_INITSIZE);
+	last_copy.src_mailbox_name = NULL;
 }
 
 void
@@ -385,8 +377,9 @@ deleted_to_trash_plugin_deinit(void)
 	hook_mail_storage_created = deleted_to_trash_next_hook_mail_storage_created;
 	hook_mailbox_list_created = deleted_to_trash_next_hook_mailbox_list_created;
 
-	if(last_copy_src_mailbox_name != NULL)
+	if(last_copy.src_mailbox_name != NULL)
 	{
-		i_free(last_copy_src_mailbox_name);
+		i_free(last_copy.src_mailbox_name);
 	}
+	array_free(&last_copy.mail_id);
 }
