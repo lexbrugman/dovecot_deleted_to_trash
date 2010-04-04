@@ -4,6 +4,7 @@
 #include "str.h"
 #include "str-sanitize.h"
 #include "mail-storage-private.h"
+#include "mail-namespace.h"
 #include "mailbox-list-private.h"
 #include "deleted-to-trash-plugin.h"
 #include <stdlib.h>
@@ -30,6 +31,26 @@ static unsigned int last_copy_mail_id[2000];
 static unsigned int last_copy_mail_number = 0;
 static char *last_copy_src_mailbox_name = NULL;
 
+struct mail_namespace *
+get_users_inbox_namespace(struct mail_user *user)
+{
+	struct mail_namespace *ns = NULL;
+	struct mail_namespace *curns = NULL;
+
+	/* find the inbox namespace */
+	for(curns = user->namespaces; curns != NULL; curns = curns->next)
+	{
+		if(curns->flags & NAMESPACE_FLAG_INBOX)
+		{
+			ns = curns;
+			break;
+		}
+		i_free(curns);
+	}
+
+	return ns;
+}
+
 static int
 search_deleted_id(struct mail *_mail)
 {
@@ -38,8 +59,8 @@ search_deleted_id(struct mail *_mail)
 	int ret = 0;
 
 	/**
-	 * only it is under the same copy and delete box, the comparation is done, otherwise, need to reset last copy data 
-	 * since copy always follows a delete in IMAP command (when move email from one folder to another folder).
+	 * only if the copy and delete box are the same, otherwise, we need to reset the last copy data
+	 * since copy always follows a delete in IMAP (when moving an email from one folder to another folder).
 	 */
 	if(last_copy_src_mailbox_name != NULL && strcmp(_mail->box->name, last_copy_src_mailbox_name) == 0)
 	{
@@ -94,8 +115,10 @@ copy_deleted_mail_to_trash(struct mail *_mail)
 {
 	int ret;
 	struct mailbox *trash_box = NULL;
+	struct mail_namespace *ns = NULL;
 
-	trash_box = mailbox_open_or_create(_mail->box->storage, TRASH_NAME);
+	ns = get_users_inbox_namespace(_mail->box->storage->ns->user);
+	trash_box = mailbox_open_or_create(ns->storage, TRASH_NAME);
 
 	if(trash_box != NULL)
 	{
@@ -109,7 +132,7 @@ copy_deleted_mail_to_trash(struct mail *_mail)
 
 		keywords_list = mail_get_keywords(_mail);
 		keywords = str_array_length(keywords_list) == 0 ? NULL : mailbox_keywords_create_valid(trash_box, keywords_list);
-		/* dovecot won't set delete flag at this moment */
+		/* dovecot won't set the delete flag at this moment */
 		save_ctx = mailbox_save_alloc(dest_trans);
 		/* remove the deleted flag for the new copy */
 		enum mail_flags flags = mail_get_flags(_mail);
@@ -167,8 +190,11 @@ deleted_to_trash_mail_update_flags(struct mail *_mail, enum modify_type modify_t
 
 	if(((old_flags ^ new_flags) & MAIL_DELETED) != 0)
 	{
-		/* marked as deleted, also not delete from Trash folder */
-		if(new_flags & MAIL_DELETED && strcmp(_mail->box->name, TRASH_NAME) != 0)
+		struct mail_namespace *ns = NULL;
+		ns = get_users_inbox_namespace(_mail->box->storage->ns->user);
+
+		/* marked as deleted and not deleted from the Trash folder */
+		if(new_flags & MAIL_DELETED && !(strcmp(_mail->box->name, TRASH_NAME) == 0 && strcmp(_mail->box->storage->ns->prefix, ns->prefix) == 0))
 		{
 			if(search_deleted_id(_mail))
 			{
@@ -210,7 +236,7 @@ deleted_to_trash_copy(struct mail_save_context *save_ctx, struct mail *mail)
 {
 	int ret = 0;
 
-	/* in one Copy command of IMAP, it can contains many mails ID, so, this function will be called multiple times */
+	/* one IMAP copy command can contain many mails ID's, so, this function will be called multiple times */
 	union mailbox_module_context *lbox = DELETED_TO_TRASH_CONTEXT(save_ctx->transaction->box);
 	if(lbox->super.copy(save_ctx, mail) < 0)
 	{
@@ -218,7 +244,7 @@ deleted_to_trash_copy(struct mail_save_context *save_ctx, struct mail *mail)
 	}
 	else
 	{
-		/* if copy transaction context changes, means it possible starts a new copy, so add additional conditions to check folder name */
+		/* if the copy transaction context changes, a new copy could have been started, so add additional conditions to check the folder name */
 		i_info("from %s to %s, previous action from %s", mail->box->name, save_ctx->transaction->box->name, last_copy_src_mailbox_name);
 		if(last_copy_transaction_context == save_ctx->transaction && last_copy_src_mailbox_name != NULL && strcmp(last_copy_src_mailbox_name, mail->box->name) == 0)
 		{
@@ -229,7 +255,7 @@ deleted_to_trash_copy(struct mail_save_context *save_ctx, struct mail *mail)
 			}
 		}
 		else 
-		{ /* if copy from Trash to some other folder, we don't mark it */
+		{ /* if copying from Trash to some other folder, we don't mark it */
 			last_copy_transaction_context = save_ctx->transaction;
 			last_copy_mail_number = 0;
 			if(strcmp(mail->box->name, TRASH_NAME) != 0 )
