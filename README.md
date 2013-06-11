@@ -13,31 +13,31 @@ Download the sourcecode.
 
 Edit the Makefile to match your environment:
 
-  # Dovecot's header directory
-  DOVECOT_INC_PATH = /usr/include/dovecot
-  # Dovecot's IMAP plugin path
-  DOVECOT_IMAP_PLUGIN_PATH = /usr/lib/dovecot/imap
+	# Dovecot's header directory
+	DOVECOT_INC_PATH = /usr/include/dovecot
+	# Dovecot's IMAP plugin path
+	DOVECOT_IMAP_PLUGIN_PATH = /usr/lib/dovecot/imap
 
 Run:
 
-  make
-  make install
+	make
+	make install
 
 Configuration
 =============
 
 Add the plugin to your mail_plugins in the imap protocol section
 
-  protocol imap {
-          [...]
-          mail_plugins = deleted_to_trash
-  }
+	protocol imap {
+	        [...]
+	        mail_plugins = deleted_to_trash
+	}
 
 Set the name of the trash folder in the plugin section of your configuration file
 
-  plugin {
-          [...]
-          deleted_to_trash_folder = Trash
-  }
+	plugin {
+	        [...]
+	        deleted_to_trash_folder = Trash
+	}
 
 Restart Dovecot, and that's all.
