@@ -12,6 +12,12 @@ SLOT="0"
 IUSE=""
 RDEPEND="=net-mail/dovecot-1.2*"
 
+S=${S}/src
+
+src_prepare() {
+	sed -i 's/DOVECOT_IMAP_PLUGIN_PATH = \/usr\/lib\/dovecot\/imap/DOVECOT_IMAP_PLUGIN_PATH = \/usr\/lib\/dovecot/' Makefile
+}
+
 src_install() {
 	emake DESTDIR="${D}" install || die
 }
