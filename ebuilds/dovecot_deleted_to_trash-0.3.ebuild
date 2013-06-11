@@ -3,7 +3,7 @@ EAPI="2"
 DESCRIPTION="Deleted to trash IMAP plugin for Dovecot"
 HOMEPAGE="http://wiki.dovecot.org/Plugins/deleted-to-trash"
 RESTRICT="nomirror"
-SRC_URI="http://wiki.dovecot.org/Plugins/deleted-to-trash?action=AttachFile&do=get&target=${P}.tar.gz -> ${P}.tar.gz"
+SRC_URI="https://github.com/lexbrugman/dovecot_deleted_to_trash/archive/v0.3.tar.gz -> ${P}.tar.gz"
 
 LICENSE=""
 KEYWORDS="~amd64 ~x86"
