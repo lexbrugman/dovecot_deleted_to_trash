@@ -10,7 +10,7 @@ KEYWORDS="~amd64 ~x86"
 SLOT="0"
 
 IUSE=""
-RDEPEND="net-mail/dovecot"
+RDEPEND="=net-mail/dovecot-1.2*"
 
 src_install() {
 	emake DESTDIR="${D}" install || die
