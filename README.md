@@ -4,7 +4,7 @@ dovecot_deleted_to_trash
 Purpose
 =======
 
-The purpose of this deleted_to_trash-plugin is that IMAP client,such as outlook doesn't work well with dovecot, it can not copy deleted email to Trash folder automatically. So, this plugin is to copy deleted item to Trash folder. Also, need to tell the difference between "move" and "delete" action on Outlook side, since both action deleted_to_trash marks the original email as deleted. for a "move" case, we don't copy to the trash folder.
+The purpose of this deleted_to_trash-plugin is to fix unexepected behaviour that occurs when using IMAP clients such as outlook, it can not copy deleted email to Trash folder automatically. So, this plugin is designed to copy deleted items to the Trash folder. The plugin needs to tell the difference between "move" and "delete" actions on the client side, since both actions mark the original email as deleted. For a "move" case, we don't copy the email to the trash folder.
 
 Installation
 ============
