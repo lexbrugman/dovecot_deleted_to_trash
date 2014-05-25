@@ -16,7 +16,7 @@ Edit the Makefile to match your environment:
 	# Dovecot's header directory
 	DOVECOT_INC_PATH = /usr/include/dovecot
 	# Dovecot's IMAP plugin path
-	DOVECOT_IMAP_PLUGIN_PATH = /usr/lib/dovecot/imap
+	DOVECOT_IMAP_PLUGIN_PATH = /usr/lib/dovecot/modules
 
 Run:
 
