@@ -26,19 +26,9 @@ Run:
 Configuration
 =============
 
-Add the plugin to your mail_plugins in the imap protocol section
+Edit the src/95-deleted_to_trash_plugin.conf file and run:
 
-	protocol imap {
-	        [...]
-	        mail_plugins = deleted_to_trash
-	}
-
-Set the name of the trash folder in the plugin section of your configuration file
-
-	plugin {
-	        [...]
-	        deleted_to_trash_folder = Trash
-	}
+	sudo make configure
 
 Restart Dovecot, and that's all.
 
