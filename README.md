@@ -21,7 +21,7 @@ Edit the Makefile to match your environment:
 Run:
 
 	make
-	make install
+	sudo make install
 
 Configuration
 =============
@@ -41,3 +41,5 @@ Set the name of the trash folder in the plugin section of your configuration fil
 	}
 
 Restart Dovecot, and that's all.
+
+	sudo service dovecot reload
