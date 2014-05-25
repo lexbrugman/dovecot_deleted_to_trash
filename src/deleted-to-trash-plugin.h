@@ -12,15 +12,18 @@
 #define DELETED_TO_TRASH_CONTEXT(obj) MODULE_CONTEXT(obj, deleted_to_trash_storage_module)
 #define DELETED_TO_TRASH_MAIL_CONTEXT(obj) MODULE_CONTEXT(obj, deleted_to_trash_mail_module)
 
+
+ARRAY_DEFINE_TYPE(mail_ids, unsigned int);
+
 struct last_copy_info
 {
 	void *transaction_context;
-	ARRAY_DEFINE(mail_id, unsigned int);
+	ARRAY_TYPE(mail_ids) mail_id;
 	char *src_mailbox_name;
 };
 
 /* defined by imap, pop3, lda */
-const char *deleted_to_trash_plugin_version = PACKAGE_VERSION;
+const char *deleted_to_trash_plugin_version = DOVECOT_ABI_VERSION;
 
 static MODULE_CONTEXT_DEFINE_INIT(deleted_to_trash_storage_module, &mail_storage_module_register);
 static MODULE_CONTEXT_DEFINE_INIT(deleted_to_trash_mail_module, &mail_module_register);
