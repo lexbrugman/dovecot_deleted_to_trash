@@ -23,7 +23,11 @@ struct last_copy_info
 };
 
 /* defined by imap, pop3, lda */
+#ifdef DOVECOT_ABI_VERSION
 const char *deleted_to_trash_plugin_version = DOVECOT_ABI_VERSION;
+#else
+const char *deleted_to_trash_plugin_version = DOVECOT_VERSION;
+#endif
 
 static MODULE_CONTEXT_DEFINE_INIT(deleted_to_trash_storage_module, &mail_storage_module_register);
 static MODULE_CONTEXT_DEFINE_INIT(deleted_to_trash_mail_module, &mail_module_register);
