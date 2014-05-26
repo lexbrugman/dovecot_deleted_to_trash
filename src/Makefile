@@ -5,7 +5,9 @@
 # Dovecot's header directory
 DOVECOT_INC_PATH = /usr/include/dovecot
 # Dovecot's IMAP plugin path
-DOVECOT_IMAP_PLUGIN_PATH = /usr/lib/dovecot/imap
+DOVECOT_IMAP_PLUGIN_PATH = /usr/lib/dovecot/modules
+# Dovecot's config path
+DOVECOT_CONFIG_PATH = /etc/dovecot/conf.d 
 
 ## usually no need to configure anything below this line ##
 
@@ -13,10 +15,13 @@ DOVECOT_IMAP_PLUGIN_PATH = /usr/lib/dovecot/imap
 PLUGIN_SOURCES = deleted-to-trash-plugin.c
 PLUGIN_NAME = lib_deleted_to_trash_plugin.so
 
+# config file
+PLUGIN_CONFIG_FILE = 95-deleted_to_trash_plugin.conf
+
 #### configuration end ####
 
 
-.PHONY: all build install clean
+.PHONY: all build install configure clean
 
 all: build
 
@@ -40,6 +45,10 @@ install: install_plugin
 install_plugin: ${PLUGIN_NAME}
 	install -d ${DESTDIR}/${DOVECOT_IMAP_PLUGIN_PATH}
 	install $< ${DESTDIR}/${DOVECOT_IMAP_PLUGIN_PATH}
+
+configure:
+	install -d ${DESTDIR}/${DOVECOT_CONFIG_PATH}
+	install -m 644 ${PLUGIN_CONFIG_FILE} ${DESTDIR}/${DOVECOT_CONFIG_PATH}
 
 clean:
 	$(RM) ${PLUGIN_NAME}
