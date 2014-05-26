@@ -15,7 +15,7 @@ KEYWORDS="~amd64 ~x86"
 SLOT="0"
 
 IUSE=""
-DEPEND=">=net-mail/dovecot-2.1* <=net-mail/dovecot-2.2*"
+DEPEND="( =net-mail/dovecot-2.1* ) || ( =net-mail/dovecot-2.2* )"
 
 src_unpack() {
 	default
