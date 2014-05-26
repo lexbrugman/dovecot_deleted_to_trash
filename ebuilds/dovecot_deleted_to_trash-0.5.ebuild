@@ -15,7 +15,7 @@ KEYWORDS="~amd64 ~x86"
 SLOT="0"
 
 IUSE=""
-RDEPEND="=net-mail/dovecot-2.1*"
+DEPEND="=net-mail/dovecot-2.1*"
 
 src_unpack() {
 	default

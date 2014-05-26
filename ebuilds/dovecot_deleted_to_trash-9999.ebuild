@@ -15,7 +15,7 @@ KEYWORDS="~amd64 ~x86"
 SLOT="0"
 
 IUSE=""
-RDEPEND="=net-mail/dovecot-2*"
+DEPEND="=net-mail/dovecot-2*"
 
 src_unpack() {
 	default
@@ -23,11 +23,9 @@ src_unpack() {
 }
 
 src_prepare() {
-	cd src
 	sed -i 's/DOVECOT_IMAP_PLUGIN_PATH = \/usr\/lib\/dovecot\/imap/DOVECOT_IMAP_PLUGIN_PATH = \/usr\/lib\/dovecot/' Makefile
 }
 
 src_install() {
-	cd src
 	emake DESTDIR="${D}" install || die
 }

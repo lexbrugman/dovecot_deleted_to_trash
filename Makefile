@@ -12,7 +12,6 @@ DOVECOT_CONFIG_PATH = /etc/dovecot/conf.d
 ## usually no need to configure anything below this line ##
 
 # plugin source & target name #
-PLUGIN_SOURCES = deleted-to-trash-plugin.c
 PLUGIN_NAME = lib_deleted_to_trash_plugin.so
 
 # config file
@@ -20,6 +19,8 @@ PLUGIN_CONFIG_FILE = 95-deleted_to_trash_plugin.conf
 
 #### configuration end ####
 
+SRCDIR = src
+SOURCES := $(wildcard $(SRCDIR)/*.c)
 
 .PHONY: all build install configure clean
 
@@ -27,7 +28,7 @@ all: build
 
 build: ${PLUGIN_NAME}
 
-${PLUGIN_NAME}: ${PLUGIN_SOURCES}
+${PLUGIN_NAME}: ${SOURCES}
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) \
 	      -fPIC -shared -Wall \
 	      -I${DOVECOT_INC_PATH} \
