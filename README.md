@@ -26,7 +26,7 @@ Run:
 Configuration
 =============
 
-Edit the src/95-deleted_to_trash_plugin.conf file and run:
+Edit the 95-deleted_to_trash_plugin.conf file and run:
 
 	sudo make configure
 
