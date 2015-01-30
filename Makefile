@@ -5,7 +5,7 @@
 # Dovecot's header directory
 DOVECOT_INC_PATH = /usr/include/dovecot
 # Dovecot's IMAP plugin path
-DOVECOT_IMAP_PLUGIN_PATH = /usr/lib/dovecot/modules
+DOVECOT_IMAP_PLUGIN_PATH ?= /usr/lib/dovecot/modules
 # Dovecot's config path
 DOVECOT_CONFIG_PATH = /etc/dovecot/conf.d 
 
