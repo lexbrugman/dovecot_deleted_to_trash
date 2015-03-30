@@ -10,7 +10,6 @@ Group: Networking/Daemons
 Source: %{name}-%{version}.tar.gz
 
 License: GPL
-BuildRoot: /var/tmp/%{name}-%{version}-%{release}-buildroot
 
 BuildRequires: dovecot-devel, postgresql-devel
 Requires: dovecot >= 2.0.15
@@ -31,6 +30,7 @@ mv %{buildroot}/%{_libdir}/dovecot/lib_deleted_to_trash_plugin.so %{buildroot}/%
 
 %files
 %{_libdir}/dovecot/lib89_deleted_to_trash_plugin.so
+%doc 95-deleted_to_trash_plugin.conf
 
 %changelog
 * Mon Mar 30 2015 Davide Principi <davide.principi@nethesis.it> - 0.6-2
