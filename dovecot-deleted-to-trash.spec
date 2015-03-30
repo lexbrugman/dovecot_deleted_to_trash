@@ -3,7 +3,7 @@
 
 Name:           dovecot-deleted-to-trash
 Version:        0.6
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Dovecot plugin: copy deleted item to Trash folder
 
 Group: Networking/Daemons
@@ -27,11 +27,15 @@ make
 
 %install
 make install DESTDIR=%{buildroot} DOVECOT_IMAP_PLUGIN_PATH=%{_libdir}/dovecot
+mv %{buildroot}/%{_libdir}/dovecot/lib_deleted_to_trash_plugin.so %{buildroot}/%{_libdir}/dovecot/lib89_deleted_to_trash_plugin.so 
 
 %files
-%{_libdir}/dovecot/lib_deleted_to_trash_plugin.so
+%{_libdir}/dovecot/lib89_deleted_to_trash_plugin.so
 
 %changelog
+* Mon Mar 30 2015 Davide Principi <davide.principi@nethesis.it> - 0.6-2
+- Load deleted_to_trash before antispam plugin. Bug #3095 [NethServer]
+
 * Tue Jan 27 2014 Edoardo Spadoni <edoardo.spadoni@nethesis.it> - 0.6
 - Update to version 0.6
 
