@@ -114,7 +114,11 @@ static int copy_deleted_mail_to_trash(struct mail *_mail)
 		struct mail_keywords *keywords;
 		const char *const *keywords_list;
 
+#if DOVECOT_VERSION_MAJOR == 2 && DOVECOT_VERSION_MINOR >= 3
+		dest_trans = mailbox_transaction_begin(trash_box, MAILBOX_TRANSACTION_FLAG_EXTERNAL, __func__);
+#else
 		dest_trans = mailbox_transaction_begin(trash_box, MAILBOX_TRANSACTION_FLAG_EXTERNAL);
+#endif
 
 		keywords_list = mail_get_keywords(_mail);
 		keywords = str_array_length(keywords_list) == 0 ? NULL : mailbox_keywords_create_valid(trash_box, keywords_list);
