@@ -2,7 +2,7 @@
 #%global debug_package %{nil}
 
 Name:           dovecot-deleted-to-trash
-Version:        0.6
+Version:        0.7
 Release:        2%{?dist}
 Summary:        Dovecot plugin: copy deleted item to Trash folder
 
@@ -11,7 +11,7 @@ Source: %{name}-%{version}.tar.gz
 
 License: GPL
 
-BuildRequires: dovecot-devel, postgresql-devel
+BuildRequires: dovecot-devel
 Requires: dovecot >= 2.0.15
 
 
