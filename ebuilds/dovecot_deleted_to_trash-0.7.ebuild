@@ -22,12 +22,7 @@ src_unpack() {
 	[[ ${PV} == "9999" ]] && git-2_src_unpack
 }
 
-src_prepare() {
-	sed -i 's/DOVECOT_IMAP_PLUGIN_PATH = \/usr\/lib\/dovecot\/modules/DOVECOT_IMAP_PLUGIN_PATH = \/usr\/lib\/dovecot/' Makefile
-	eapply_user
-}
-
 src_install() {
-	emake DESTDIR="${D}" install || die
+	emake DESTDIR="${D}" DOVECOT_IMAP_PLUGIN_PATH="/usr/$(get_libdir)/dovecot" install || die
 	emake DESTDIR="${D}" configure || die
 }
